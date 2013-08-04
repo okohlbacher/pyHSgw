@@ -33,6 +33,7 @@ class HomeserverConnection(object):
         self.key = key
         self.comm_objects = {}
 
+        # local XML caching
         if refresh_cobjects or not os.path.exists(xml_local):
             url = hs_cobjects_url.format(self.ip, self.http_port)
             result = requests.get(url)
