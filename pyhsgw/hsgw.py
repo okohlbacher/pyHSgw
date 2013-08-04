@@ -72,7 +72,8 @@ def findAddrByName(s):
     global comm_objects
     for i in comm_objects.keys():
         if re.match(s, comm_objects[i]["name"]):
-            print comm_objects[i]["name"], comm_objects[i]["ga"]
+            yield dict(name=comm_objects[i]["name"], 
+                       id=comm_objects[i]["ga"])
 
 def readFromServer():
     global hs_connection
