@@ -1,15 +1,12 @@
 #!/usr/bin/python
 
-import hsgw
-from sys import argv
+import sys
+from pyhsgw.hsgw import HomeserverConnection
 
-if len(argv) != 2:
-        print argv[0], "<key>"
-
-hsgw.initConnection(key = argv[1])
-if hsgw.getAddrByName(".*Big Bang HELLIGKEIT$"):
-        bigbang = hsgw.getAddrByName(".*Big Bang HELLIGKEIT$")
-        print "Helligkeit: ", hsgw.getValue(bigbang)
-        print "Current value: ", hsgw.getValue(bigbang)
-        hsgw.setValue(bigbang, "100.0")
-        print "Helligkeit: ", hsgw.getValue(bigbang)
+regex = r'.*Big Bang HELLIGKEIT.*'
+conn = HomeserverConnection(key=sys.argv[1])
+bigbang = conn.getAddrByName(regex)
+print "Helligkeit: ", conn.getValue(bigbang)
+print "Current value: ", conn.getValue(bigbang)
+conn.setValue(bigbang, "100.0")
+print "Helligkeit: ", conn.getValue(bigbang)

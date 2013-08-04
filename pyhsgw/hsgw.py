@@ -7,117 +7,100 @@ import lxml.etree
 import sys
 import re
 
-hs_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-comm_objects = {}
+
 buffer_size = 2048 ** 2
 
-def initConnection(ip_address = "192.168.0.11", port = 7003, 
-                                     http_port = 80, key = ""):
-    global hs_connection
-    try:
-        print "Retrieving XML object names"
-        response = urllib2.urlopen('http://' + str(ip_address) + ":"    
-                                + str(http_port) + '/hscl?sys/cobjects.xml')
-        xml = response.read()
-        print "Read " + str(len(xml)) + " B of object descriptions."
-        parseXMLDescriptions(xml)
+class HomeserverConnection(object):
 
-    except:
-        print sys.exc_info()[0]
-        print "Could not retrieve communication object descriptions."
-        return False
-        
-    try:
-        print "Opening connection to " + str(ip_address) + ":" + str(port)
-        hs_connection.connect((ip_address, port))
-        print "Authenticating"
-        hs_connection.send(key + "\0")
-    except:
-        print "Could not open connection to " + str(ip_address) + ":" + str(port)
-        print sys.exc_info()[0]
-        return False
-    return readFromServer()
+    def __init__(self, ip_address = "192.168.0.11", port = 7003, http_port = 80, key = ""):
 
-def setValue(address, value):
-    global hs_connection
-    global comm_objects
-    try:
-        # Ensure we read all values that changed inbetween
-        readFromServer()
-        print "Sending to KO " + str(encodeKOAdd(address)) + " [" + str(address) + "]"
-        hs_connection.send("1|" + str(encodeKOAdd(address)) + "|" + str(value) + "\0")
-    except:
-        print "Could not set value of " + address
-        print sys.exc_info()[0]
-        raise
-    return readFromServer()
+        self.ip = ip_address
+        self.port = port
+        self.http_port = http_port
+        self.key = key
+        self.comm_objects = {}
 
-def getValue(addr):
-    global comm_objects
-    try:
-        # Ensure we read all values that changed inbetween
-        readFromServer()
-    except:
-        pass
-    return comm_objects[addr]["value"]
+        url = 'http://{}:{}/hscl?sys/cobjects.xml'.format(self.ip, self.http_port)
+        result = requests.get(url)
+        if result.status_code != 200:
+            raise RuntimeError('Unable fetching %s' % url)
+        xml = result.text.encode('utf-8')
+        self.parseXMLDescriptions(xml)
 
-def getAddrByName(s):
-    global comm_objects
-    for i in comm_objects.keys():
-        if re.match(s, comm_objects[i]["name"]):
-            return comm_objects[i]["ga"]
-    return None
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((self.ip, self.port))
+        self.sock.send(self.key + "\0")
+        self.readFromServer()
 
-def findAddrByName(s):
-    global comm_objects
-    for i in comm_objects.keys():
-        if re.match(s, comm_objects[i]["name"]):
-            yield dict(name=comm_objects[i]["name"], 
-                       id=comm_objects[i]["ga"])
+    def setValue(self, address, value):
+        try:
+            # Ensure we read all values that changed inbetween
+            self.readFromServer()
+            print "Sending to KO " + str(self.encodeKOAdd(address)) + " [" + str(address) + "]"
+            self.sock.send("1|" + str(self.encodeKOAdd(address)) + "|" + str(value) + "\0")
+        except:
+            print "Could not set value of " + address
+            print sys.exc_info()[0]
+            raise
+        return self.readFromServer()
 
-def readFromServer():
-    global hs_connection
-    data = hs_connection.recv(buffer_size)
-#   print "Received " + str(len(data)) + " B of data"
-    return parseObjectValues(data)
+    def getValue(self, addr):
+        try:
+            # Ensure we read all values that changed inbetween
+            self.readFromServer()
+        except:
+            pass
+        return self.comm_objects[addr]["value"]
 
-def parseObjectValues(data):
-    # Extract the individual values of the communication objects
-    # Each of the fields has the format "2|<KO address as int>|<value as text>"
-    # They are separated by 0x0 values. The last field is empty.
-    global comm_objects
-    for f in data.split('\0')[:-1]:
-        records = f.split("|")
-        address = decodeKOAdd(records[1])
-        value = records[2]
-        if comm_objects[address].has_key("value") and comm_objects[address]["value"] != value:
-            print comm_objects[address]["name"].encode("UTF8"),"[" + address + "]", "=", value
-        comm_objects[address]["value"] = value
-    return True
+    def getAddrByName(self, s):
+        for i in self.comm_objects.keys():
+            if re.match(s, self.comm_objects[i]["name"]):
+                return self.comm_objects[i]["ga"]
+        return None
 
-def parseXMLDescriptions(xml):
-    global comm_objects
-    root = lxml.etree.fromstring(xml)
-    objs = [dict(node.attrib) for node in root.xpath('//cobject')]
-    comm_objects = {}
-    for i in objs:
-        comm_objects[i["ga"]] = i
-    print "Read ", len(comm_objects), "communiction object descriptions."
+    def findAddrByName(self, s):
+        for i in self.comm_objects.keys():
+            if re.match(s, self.comm_objects[i]["name"]):
+                yield dict(name=self.comm_objects[i]["name"], 
+                           id=self.comm_objects[i]["ga"])
 
-# Decode the comm object address from an (int) string
-def decodeKOAdd(s):
-    add = int(s)
-    x = add/2048
-    y = (add - 2048 * x) / 256
-    z = add % 256
-    return str(x) + "/" + str(y) + "/" + str(z)
+    def readFromServer(self):
+        data = self.sock.recv(buffer_size)
+        #   print "Received " + str(len(data)) + " B of data"
+        return self.parseObjectValues(data)
 
-# Encode the int comm object address from a full (three-part)
-# KNX group address in the format "x/y/z"       
-def encodeKOAdd(s):
-    (x, y, z) = s.split("/")
-    return 2048 * int(x) + 256 * int(y) + int(z)
+    def parseObjectValues(self, data):
+        # Extract the individual values of the communication objects
+        # Each of the fields has the format "2|<KO address as int>|<value as text>"
+        # They are separated by 0x0 values. The last field is empty.
+        for f in data.split('\0')[:-1]:
+            records = f.split("|")
+            address = self.decodeKOAdd(records[1])
+            value = records[2]
+            if self.comm_objects[address].has_key("value") and self.comm_objects[address]["value"] != value:
+                print self.comm_objects[address]["name"].encode("UTF8"),"[" + address + "]", "=", value
+            self.comm_objects[address]["value"] = value
+        return True
 
-def closeConnection():
-    global hs_connection
-    hs_connection.close()
+    def parseXMLDescriptions(self, xml):
+        root = lxml.etree.fromstring(xml)
+        objs = [dict(node.attrib) for node in root.xpath('//cobject')]
+        for i in objs:
+            self.comm_objects[i["ga"]] = i
+
+    # Decode the comm object address from an (int) string
+    def decodeKOAdd(self, s):
+        add = int(s)
+        x = add/2048
+        y = (add - 2048 * x) / 256
+        z = add % 256
+        return str(x) + "/" + str(y) + "/" + str(z)
+
+    # Encode the int comm object address from a full (three-part)
+    # KNX group address in the format "x/y/z"       
+    def encodeKOAdd(self, s):
+        (x, y, z) = s.split("/")
+        return 2048 * int(x) + 256 * int(y) + int(z)
+
+    def closeConnection():
+        self.sock.close()
