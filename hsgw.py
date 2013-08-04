@@ -71,8 +71,13 @@ def getAddrByName(s):
 def readFromServer():
 	global hs_connection
 	data = hs_connection.recv(buffer_size)
-#	print "Received " + str(len(data)) + " B of data"
-	return parseObjectValues(data)
+	print "Received " + str(len(data)) + " B of data"
+	try:
+		return parseObjectValues(data)
+	except:
+		print sys.exc_info()[0]
+		print data
+		return False
 
 def parseObjectValues(data):
 	# Extract the individual values of the communication objects
