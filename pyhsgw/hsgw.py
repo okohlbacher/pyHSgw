@@ -72,8 +72,7 @@ def findAddrByName(s):
     global comm_objects
     for i in comm_objects.keys():
         if re.match(s, comm_objects[i]["name"]):
-            return comm_objects[i]["name"], comm_objects[i]["ga"]
-    return None
+            print comm_objects[i]["name"], comm_objects[i]["ga"]
 
 def readFromServer():
     global hs_connection
