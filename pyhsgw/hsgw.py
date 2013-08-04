@@ -21,7 +21,6 @@ hs_cobjects_url = 'http://{}:{}/hscl?sys/cobjects.xml'
 buffer_size = 2048 ** 2
 
 
-
 class HomeserverConnection(object):
 
     def __init__(self, ip_address = default_ip, port = default_port, 
@@ -50,7 +49,7 @@ class HomeserverConnection(object):
             # Ensure we read all values that changed inbetween
             self.readFromServer()
             print "Sending to KO " + str(self.encodeKOAdd(address)) + " [" + str(address) + "]"
-            self.sock.send("1|" + str(self.encodeKOAdd(address)) + "|" + str(value) + "\0")
+            self.sock.send("1|{}|{}\0".format(self.encodeKOAdd(address), value))
         except:
             print "Could not set value of " + address
             print sys.exc_info()[0]
@@ -66,14 +65,19 @@ class HomeserverConnection(object):
         return self.comm_objects[addr]["value"]
 
     def getAddrByName(self, s):
+        matches = list()
         for i in self.comm_objects.keys():
-            if re.match(s, self.comm_objects[i]["name"]):
-                return self.comm_objects[i]["ga"]
-        return None
+            if re.search(s, self.comm_objects[i]["name"]):
+                matches.append(self.comm_objects[i]["ga"])
+        if len(matches) == 0:
+            return None
+        elif len(matches) == 1:
+            return matches[0]
+        raise ValueError('More than one match found')
 
     def findAddrByName(self, s):
         for i in self.comm_objects.keys():
-            if re.match(s, self.comm_objects[i]["name"]):
+            if re.search(s, self.comm_objects[i]["name"]):
                 yield dict(name=self.comm_objects[i]["name"], 
                            id=self.comm_objects[i]["ga"])
 
@@ -104,15 +108,15 @@ class HomeserverConnection(object):
     # Decode the comm object address from an (int) string
     def decodeKOAdd(self, s):
         add = int(s)
-        x = add/2048
+        x = add / 2048
         y = (add - 2048 * x) / 256
         z = add % 256
-        return str(x) + "/" + str(y) + "/" + str(z)
+        return '{}/{}/{}'.format(x, y, z)
 
     # Encode the int comm object address from a full (three-part)
     # KNX group address in the format "x/y/z"       
     def encodeKOAdd(self, s):
-        (x, y, z) = s.split("/")
+        x, y, z = s.split("/")
         return 2048 * int(x) + 256 * int(y) + int(z)
 
     def closeConnection():
