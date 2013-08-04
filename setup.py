@@ -30,7 +30,12 @@ setup(name='pyhsgw',
       zip_safe=False,
       install_requires=['setuptools',
                         'requests',
+                        'plac',
                         'lxml',
                         ],
+      entry_points="""
+      [console_scripts]
+      hs-find = pyhsgw.hs_find:main
+      """,
       test_suite = None,
       )
