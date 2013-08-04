@@ -12,7 +12,7 @@ long_description = (
     )
 
 
-setup(name='pyhwgs',
+setup(name='pyhsgw',
       version=version,
       description="",
       long_description=long_description,
@@ -25,7 +25,7 @@ setup(name='pyhwgs',
       url='http://pypi.python.org/pypi/zopyx.homeserver',
       license='GNU Public License V2 (GPL 2)',
       packages=find_packages(exclude=['ez_setup']),
-      namespace_packages=['pyhwgs', ],
+      namespace_packages=['pyhsgw', ],
       include_package_data=True,
       zip_safe=False,
       install_requires=['setuptools',
