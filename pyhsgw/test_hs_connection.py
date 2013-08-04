@@ -3,7 +3,7 @@
 import sys
 from pyhsgw.hsgw import HomeserverConnection
 
-regex = r'.*Big Bang HELLIGKEIT.*'
+regex = r'.*Big Bang HELLIGKEIT$'
 conn = HomeserverConnection(key=sys.argv[1])
 bigbang = conn.getAddrByName(regex)
 print "Helligkeit: ", conn.getValue(bigbang)
