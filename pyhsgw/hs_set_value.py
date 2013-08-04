@@ -11,11 +11,6 @@ print "key =", key
 print "addr =", addr
 print "value =", value
 
-if not hsgw.initConnection(key = key):
-    print "Could not initialize connection."
-    exit(1)
-
-print "Setting value of", hsgw.comm_objects[addr]['name'].encode('utf-8'), "[" + str(addr) + "] to ", value
-hsgw.setValue(addr, value)
-
-hsgw.closeConnection()
+conn = hsgw.HomeserverConnection(key = key)
+conn.setValue(addr, value)
+conn.closeConnection()

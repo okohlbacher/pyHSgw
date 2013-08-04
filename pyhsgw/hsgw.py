@@ -35,13 +35,14 @@ class HomeserverConnection(object):
         url = hs_cobjects_url.format(self.ip, self.http_port)
         result = requests.get(url)
         if result.status_code != 200:
-            raise RuntimeError('Unable fetching %s' % url)
+            raise RuntimeError('Unable to fetch %s.' % url)
         xml = result.text.encode('utf-8')
         self.parseXMLDescriptions(xml)
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.ip, self.port))
         self.sock.send(self.key + "\0")
+        print "Sent message: ", self.key
         self.readFromServer()
 
     def setValue(self, address, value):
@@ -49,7 +50,9 @@ class HomeserverConnection(object):
             # Ensure we read all values that changed inbetween
             self.readFromServer()
             print "Sending to KO " + str(self.encodeKOAdd(address)) + " [" + str(address) + "]"
-            self.sock.send("1|{}|{}\0".format(self.encodeKOAdd(address), value))
+            telegram = "1|{}|{}\0".format(self.encodeKOAdd(address), value)
+            print "Sending telegram:", telegram
+            self.sock.send(telegram)
         except:
             print "Could not set value of " + address
             print sys.exc_info()[0]
@@ -82,8 +85,13 @@ class HomeserverConnection(object):
                            id=self.comm_objects[i]["ga"])
 
     def readFromServer(self):
-        data = self.sock.recv(buffer_size)
-        #   print "Received " + str(len(data)) + " B of data"
+        data = ""
+        while True:
+            buf = self.sock.recv(buffer_size)
+            if len(buf) != 1448:
+                break
+            data += buf
+        print "Received " + str(len(data)) + " B of data"
         return self.parseObjectValues(data)
 
     def parseObjectValues(self, data):
@@ -119,5 +127,5 @@ class HomeserverConnection(object):
         x, y, z = s.split("/")
         return 2048 * int(x) + 256 * int(y) + int(z)
 
-    def closeConnection():
+    def closeConnection(self):
         self.sock.close()
