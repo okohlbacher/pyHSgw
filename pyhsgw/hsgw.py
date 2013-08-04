@@ -7,12 +7,25 @@ import lxml.etree
 import sys
 import re
 
+# The default IP address, port and HTTP port of the
+# Gira HS/FS. Deviating setups can be specified upon
+# instantiating the HomeserverConnection.
+default_ip = "192.168.0.11"
+default_port = 7003
+default_http_port = 80
+
+# The location of the HS cobjects xml file. This
+# needs to be enabled in the Expert (KO Gateway).
+hs_cobjects_url = 'http://{}:{}/hscl?sys/cobjects.xml'
 
 buffer_size = 2048 ** 2
 
+
+
 class HomeserverConnection(object):
 
-    def __init__(self, ip_address = "192.168.0.11", port = 7003, http_port = 80, key = ""):
+    def __init__(self, ip_address = default_ip, port = default_port, 
+                 http_port = default_http_port, key = ""):
 
         self.ip = ip_address
         self.port = port
@@ -20,7 +33,7 @@ class HomeserverConnection(object):
         self.key = key
         self.comm_objects = {}
 
-        url = 'http://{}:{}/hscl?sys/cobjects.xml'.format(self.ip, self.http_port)
+        url = hs_cobjects_url.format(self.ip, self.http_port)
         result = requests.get(url)
         if result.status_code != 200:
             raise RuntimeError('Unable fetching %s' % url)
