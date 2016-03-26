@@ -34,6 +34,8 @@ setup(name='pyhsgw',
                         ],
       entry_points=dict(console_scripts=[
         'hs-find=pyhsgw.hs_find:main',
+        'hs-set-value-by-addr=pyhsgw.hs_set_value_by_addr:main',
+        'hs-get-value-by-addr=pyhsgw.hs_get_value_by_addr:main',
           ]),
       test_suite = None,
       )

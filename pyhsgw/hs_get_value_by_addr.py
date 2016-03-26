@@ -1,14 +1,19 @@
 #!/usr/bin/python
 
-import hsgw
-from sys import argv, exit
+import sys
+import plac
 
-if len(argv) != 3:
-    print argv[0], "<key> <addr>"
-    exit(1)
+from hsgw import HomeserverConnection
 
-(key, addr) = argv[1:]
-conn = hsgw.HomeserverConnection(key = key)
-name = "(" + conn.getNameByAddr(addr) + ")"
-print addr, "=", conn.getValueByAddr(addr), name
-conn.closeConnection()
+@plac.annotations(
+    key=('Homeserver key', 'option', 'k'),
+    addr=('C.O. address', 'option', 'a'),
+    refresh=('Refresh cobjects.xml from server', 'flag', 'c'))
+
+def get_val(addr, key=None, refresh=False):
+    conn = HomeserverConnection(key=key, refresh_cobjects=refresh)
+    print conn.getValueByAddr(addr)
+    conn.close()
+
+def main():
+    plac.call(get_val)

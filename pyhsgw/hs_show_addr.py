@@ -6,10 +6,11 @@ from sys import argv, exit
 
 if len(argv) != 2 and len(argv) != 3:
     print argv[0], "<key> [<regex>]"
+    exit(1)
 
 conn = hsgw.HomeserverConnection(key = argv[1], refresh_cobjects = True)
 
-for x,y in conn.comm_objects.items():
+for x,y in conn.co_by_id.items():
     if (len(argv) == 2):
         print y['name'].encode('utf-8'), "[" + x  + "]"
     else:
