@@ -7,6 +7,8 @@ import socket
 import requests
 import lxml.etree
 import time
+from os import path
+
 
 # The default IP address, port and HTTP port of the
 # Gira HS/FS. Deviating setups can be specified upon
@@ -14,6 +16,7 @@ import time
 default_ip = '192.168.0.11'
 default_port = 7003
 default_http_port = 80
+default_key_filename = ".hs-key"
 
 # The location of the HS cobjects xml file. This
 # needs to be enabled in the Expert (CO Gateway).
@@ -36,7 +39,16 @@ class HomeserverConnection(object):
         self.id_by_name = {}
         self.name_by_id = {}
         self.co_by_id = {}
-        print "HSConn(", ip_address, ", ", port, ", ", http_port, ", ", key, ")"
+        self.value = {}
+
+        if self.key == None or self.key == '':
+            try:
+               key_file = path.join(path.expanduser("~"), default_key_filename) 
+               self.key = open(key_file, "r").readlines()[0][:-1]
+            except:
+               pass
+ 
+        print "HSConn(", self.ip, ", ", self.port, ", ", self.http_port, ", ", self.key, ")"
 
         # local XML caching
         if refresh_cobjects or not os.path.exists(xml_local):
@@ -57,16 +69,16 @@ class HomeserverConnection(object):
         self.parseXMLDescriptions(xml)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.ip, self.port))
-        self.sock.send(self.key + '\0')
+        self.sock.send(str(self.key) + '\0')
         self.readFromServer()
 
     def setValue(self, address, value):
         try:
             # Ensure we read all values that changed inbetween
             self.readFromServer()
-            print "Sending to CO " + str(self.encodeCOAddr(address)) + " [" + str(address) + "]"
+#            print "Sending to CO " + str(self.encodeCOAddr(address)) + " [" + str(address) + "]"
             telegram = "1|{}|{}\0".format(self.encodeCOAddr(address), value)
-            print "Sending telegram:", telegram
+#            print "Sending telegram:", telegram
             self.sock.send(telegram)
         except:
             print 'Could not set value of ' + address
@@ -111,10 +123,16 @@ class HomeserverConnection(object):
             count += 1
             id = self.id_by_addr.get(address)
             if not id:
-                print "Could not find id for address",address
+                print "Could not find id for address",address 
+                pass
             else:
                 self.co_by_id[id]['value'] = value
+                self.value[address] = value
         print "Read values for", count, "COs."
+        f = open("debug.ocs.log", "w")
+        for i in self.value.keys():
+            f.write("{} = {} ({})\n".format(str(i), str(self.value.get(i)), self.co_by_id[self.id_by_addr[i]]['name'].encode('utf-8')))
+        f.close()
         return count
 
     def parseXMLDescriptions(self, xml):
@@ -130,7 +148,7 @@ class HomeserverConnection(object):
             name = (node.attrib['path'] + node.attrib['name']).encode('utf-8')
             self.id_by_name[name] = id
             self.name_by_id[id] = name
-        print "Read", len(self.id_by_name), "COs"
+#        print "Read", len(self.id_by_name), "COs"
 
     # Decode the comm object address from an (int) string
     def decodeCOAddr(self, s):
